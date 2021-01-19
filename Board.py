@@ -21,5 +21,3 @@ class Board:
         else:
             self.move = "0"
 
-    def check_pos(self, pos: tuple):
-        print(pos[0] // 80, pos[1] // 80)

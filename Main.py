@@ -1,5 +1,3 @@
-import pprint
-
 import pygame
 from pygame import *
 
@@ -26,29 +24,28 @@ def main():
     text_font = pygame.font.Font(None, 30)
     current_move_text = text_font.render("Ход", 1, pygame.Color('black'))
     winner_text = text_font.render("Победитель", 1, pygame.Color('black'))
-
+    help_text = text_font.render("Нет хода", 1, pygame.Color('black'))
+    draw_text = text_font.render("Ничья", 1, pygame.Color('black'))
     run = True
-
     gold = pygame.image.load("gold1.png")
     black = pygame.image.load("black1.png")
-
     screen.blit(background, (0, 0))
-
     draw_board(screen)
-
     screen.blit(gold, (4 * 80 + 5, 3 * 80 + 5))
     screen.blit(black, (4 * 80 + 5, 4 * 80 + 5))
     screen.blit(black, (3 * 80 + 5, 3 * 80 + 5))
     screen.blit(gold, (3 * 80 + 5, 4 * 80 + 5))
     display_current_move(screen, current_move_text, black)
+    screen.blit(help_text, (680, 600))
     pygame.display.update()
     while run:
         for e in pygame.event.get():
             if e.type == QUIT:
                 run = False
             if e.type == pygame.MOUSEBUTTONDOWN:
-                check_pos(e.pos, board, screen, winner_text, gold, black)
+                check_pos(e.pos, board)
                 screen.blit(background, (0, 0))
+                screen.blit(help_text, (680, 600))
                 draw_board(screen)
                 for i in range(8):
                     for j in range(8):
@@ -61,7 +58,7 @@ def main():
                 elif board.current_move() == "1" and board.discs_on_board < 64:
                     display_current_move(screen, current_move_text, gold)
                 else:
-                    get_winner(board, screen, winner_text, gold, black)
+                    get_winner(board, screen, winner_text, draw_text, gold, black)
                 pygame.display.update()
 
 
@@ -70,11 +67,41 @@ def display_current_move(screen, text, disc_color):
     screen.blit(disc_color, (685, 60))
 
 
-def check_pos(pos: tuple, board: Board, screen, text, gold, black):
+def check_pos(pos: tuple, board: Board):
+    if 641 < pos[0] < 800 and 600 < pos[1] < 640:
+        l = []
+        for i in range(8):
+            for j in range(8):
+                if board.board[i][j] == "-":
+                    l.append((i * 80, j * 80))
+        if l:
+            count = 0
+            for k in l:
+                if c(k, board):
+                    break
+                else:
+                    count += 1
+            if count == len(l):
+                board.change_move()
+    else:
+        xpos, ypos = pos[0] // 80, pos[1] // 80
+        slist = c(pos, board)
+        if slist:
+            board.board[ypos][xpos] = board.current_move()
+            for fpos in slist:
+                if board.current_move() == "1":
+                    board.board[fpos[0]][fpos[1]] = "1"
+                else:
+                    board.board[fpos[0]][fpos[1]] = "0"
+            board.discs_on_board += 1
+            board.change_move()
+
+
+def c(pos, board):
     pos = pos[0] // 80, pos[1] // 80
     xpos, ypos = pos[0], pos[1]
     if xpos <= 7 and ypos <= 7:
-        lst = [] # проверяем есть ли вокруг выбранной клетки клетки другого цвета
+        lst = []  # проверяем есть ли вокруг выбранной клетки клетки другого цвета
         if board.board[pos[1]][pos[0]] == "-":
             for i in range(ypos - 1, ypos + 2):
                 for j in range(xpos - 1, xpos + 2):
@@ -83,7 +110,7 @@ def check_pos(pos: tuple, board: Board, screen, text, gold, black):
                     elif board.current_move() == "0" and board.board[i][j] == "1" \
                             or board.current_move() == "1" and board.board[i][j] == "0":
                         lst.append((j, i))  # lst[0] - x, lst[1] - y
-        if lst: # если нужные клетки есть, то перебираем
+        if lst:  # если нужные клетки есть, то перебираем
             slist = []
             for i in lst:
                 if i[0] - xpos > 0:
@@ -119,19 +146,10 @@ def check_pos(pos: tuple, board: Board, screen, text, gold, black):
                             break
                     except IndexError:
                         continue
-                print(slist)
-            if slist:
-                board.board[ypos][xpos] = board.current_move()
-                for fpos in slist:
-                    if board.current_move() == "1":
-                        board.board[fpos[0]][fpos[1]] = "1"
-                    else:
-                        board.board[fpos[0]][fpos[1]] = "0"
-                board.discs_on_board += 1
-                board.change_move()
+            return slist
 
 
-def get_winner(board, screen, text, gold, black):
+def get_winner(board, screen, text, draw, gold, black):
     if board.discs_on_board == 64:
         count_1 = 0
         count_0 = 0
@@ -147,6 +165,8 @@ def get_winner(board, screen, text, gold, black):
         elif count_0 > count_1:
             screen.blit(text, (660, 20))
             screen.blit(black, (685, 60))
+        else:
+            screen.blit(draw, (660, 20))
 
 
 def start_screen():
@@ -178,8 +198,6 @@ def start_screen():
                 elif 310 <= e.pos[0] <= 495 and 400 <= e.pos[1] <= 450:
                     rules_screen()
                     run = False
-                print(e.pos)
-                # elif
 
 
 def rules_screen():
@@ -219,8 +237,6 @@ def rules_screen():
                 if 5 <= e.pos[0] <= 85 and 5 <= e.pos[1] <= 85:
                     run = False
                     start_screen()
-
-                print(e.pos)
 
 
 def draw_board(screen):
